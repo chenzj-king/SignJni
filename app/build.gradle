@@ -1,0 +1,113 @@
+import java.text.SimpleDateFormat
+
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion versions.compileSdk
+    buildToolsVersion versions.buildTools
+
+    compileOptions {
+        targetCompatibility 1.8
+        sourceCompatibility 1.8
+    }
+
+    dataBinding {
+        enabled true
+    }
+
+    defaultConfig {
+        applicationId "com.dreamliner.signjni"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+        versionCode versions.code
+        versionName versions.name
+        ndk {
+            abiFilters 'armeabi', 'x86'
+        }
+        externalNativeBuild {
+            cmake {
+                cppFlags ""
+            }
+        }
+    }
+
+    signingConfigs {
+        release {
+            v2SigningEnabled true
+            def filePrivateProperties = file("private.properties")
+            if (filePrivateProperties.exists()) {
+                Properties propsPrivate = new Properties()
+                propsPrivate.load(new FileInputStream(filePrivateProperties))
+                storeFile file(propsPrivate['RELEASE_STORE_FILE'])
+                storePassword propsPrivate['RELEASE_STORE_PASSWORD']
+                keyAlias propsPrivate['RELEASE_KEY_ALIAS']
+                keyPassword propsPrivate['RELEASE_KEY_PASSWORD']
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            resValue 'string', 'app_name', 'SignJni-测试'
+            debuggable true
+            minifyEnabled false
+            signingConfig signingConfigs.release
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+
+        release {
+            resValue 'string', 'app_name', 'SignJni'
+            minifyEnabled true
+            shrinkResources true
+            signingConfig signingConfigs.release
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = ("${variant.buildType.name}" != "debug"
+                    ? "signJni-${variant.buildType.name}-V${variant.versionName}-" + getTimeStr() + ".apk".toLowerCase()
+                    : "signJni-${variant.buildType.name}.apk".toLowerCase())
+        }
+    }
+
+    packagingOptions {
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'META-INF/notice.txt'
+        exclude 'META-INF/LICENSE.txt'
+        exclude 'META-INF/license.txt'
+        exclude 'META-INF/services/javax.annotation.processing.Processor'
+    }
+
+    lintOptions {
+        abortOnError false
+        disable 'InvalidPackage'
+    }
+
+    dexOptions {
+        preDexLibraries = false
+        javaMaxHeapSize "8g"
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
+    }
+}
+
+dependencies {
+
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "com.android.support:multidex:$versions.multidex"
+
+    implementation "com.android.support:appcompat-v7:$versions.support"
+    implementation 'com.android.support.constraint:constraint-layout:1.1.0'
+}
+
+import java.text.SimpleDateFormat
+
+def getTimeStr() {
+    new SimpleDateFormat("yyyyMMdd").format(new Date())
+}
